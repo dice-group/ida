@@ -4,7 +4,6 @@ import AppBar from "@material-ui/core/AppBar";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
 import Box from "@material-ui/core/Box";
-import CustomizedTables from "../datatable/datatable";
 import SpanningTable from "../datatable/spanDataTable";
 import IDABarChart from "./../visualizations/barchart/barchart";
 import IDABubbleGraph from "./../visualizations/bubblechart/bubblechart";
@@ -17,6 +16,7 @@ import IDAGroupedBarGraph from "../visualizations/groupedBarChart/groupedBarChar
 import IDAGroupedBubbleChart from "../visualizations/groupedBubbleChart/groupedBubbleChart";
 import IDAScatterPlotMatrix from "../visualizations/scatterplotMatrix/scatterplotMatrix";
 import IDAVisualizationSuggestion from "../vizSuggestion/vizSuggestion";
+import IDAEnhancedTable from "../datatable/datatable";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -72,7 +72,7 @@ export default function ScrollableTabsButtonAuto(props) {
   const renderData = (tab) => {
     switch (tab.type) {
       case "table":
-        return <CustomizedTables data={tab.data} columns={tab.columns} nodeId={tab.id} />;
+        return <IDAEnhancedTable data={tab.data} columns={tab.columns} nodeId={tab.id} />;
       case "metadata":
         return <SpanningTable data={tab.data} />;
       case "barchart":
@@ -82,7 +82,7 @@ export default function ScrollableTabsButtonAuto(props) {
       case "linechart":
         return <IDALineChart data={tab.data} nodeId={tab.id} />;
       case "clustering":
-        return <CustomizedTables data={tab.data} columns={tab.columns} nodeId={tab.id} />;
+        return <IDAEnhancedTable data={tab.data} columns={tab.columns} nodeId={tab.id} />;
       case "scatterplot":
         return <IDAScatterPLot data={tab.data} nodeId={tab.id} />;
       case "scatterplotmatrix":

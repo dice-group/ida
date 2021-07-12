@@ -14,6 +14,7 @@
     "cors": "^2.8.5",
     "d3": "^6.1.1",
     "material-ui-icons": "^1.0.0-beta.36",
+    "moment": "^2.29.1",
     "prettier": "^2.0.5",
     "reac": "0.0.0",
     "react": "^16.13.1",

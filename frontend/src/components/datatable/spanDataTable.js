@@ -1,6 +1,6 @@
 import React from "react";
 import { Grid, Card, CardContent, Box } from "@material-ui/core";
-import CustomizedTables from "./datatable";
+import IDAEnhancedTable from "./datatable";
 import "./datatable.css";
 
 export default function SpanningTable(props) {
@@ -65,7 +65,7 @@ export default function SpanningTable(props) {
                   )
                 )}
                 <Box mt={2} mb={2}>
-                  <CustomizedTables data={table.fileColMd} columns={keysName} noPagination={true} />
+                  <IDAEnhancedTable data={table.fileColMd} columns={keysName} noPagination={true} />
                 </Box>
               </CardContent>
             </Card>

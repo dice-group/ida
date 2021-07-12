@@ -84,12 +84,12 @@ export default function idaChatbotActionHandler(props, actionCode, payload) {
                 type: "metadata",
                 data: metaData.filesMd,
                 fileName: "dsmd.json",
-				dsName: metaData.dsName
+                dsName: metaData.dsName
             }];
             data.forEach((table, idx) =>
                 children.push({
                     id: metaData.dsName + "_" + table.name,
-                    name: metaData.filesMd[parseInt(idx, 10)].displayName,
+                    name: metaData.filesMd.filter((f) => f.fileName === table.name)[0] ? metaData.filesMd.filter((f) => f.fileName === table.name)[0].displayName : table.name,
                     type: "table",
                     data: table.data,
                     fileName: table.name,
@@ -145,15 +145,15 @@ export default function idaChatbotActionHandler(props, actionCode, payload) {
             addVisualizationEntry(props, payload.lineChartData, "Line Chart", "linechart", payload.activeDS);
             break;
         }
-		case IDA_CONSTANTS.UI_ACTION_CODES.UAC_SCATTERPLOT: {
-			addVisualizationEntry(props, payload.scatterPlotData, "Scatter Plot", "scatterplot", payload.activeDS);
-			break;
-		}
-		case IDA_CONSTANTS.UI_ACTION_CODES.UAC_SCATTERPLOTMATRIX: {
-			addVisualizationEntry(props, payload.scatterPlotMatrixData, "Scatter Plot Matrix", "scatterplotmatrix", payload.activeDS);
-			break;
-		}
-		case IDA_CONSTANTS.UI_ACTION_CODES.UAC_CLUSTERING: {
+        case IDA_CONSTANTS.UI_ACTION_CODES.UAC_SCATTERPLOT: {
+            addVisualizationEntry(props, payload.scatterPlotData, "Scatter Plot", "scatterplot", payload.activeDS);
+            break;
+        }
+        case IDA_CONSTANTS.UI_ACTION_CODES.UAC_SCATTERPLOTMATRIX: {
+            addVisualizationEntry(props, payload.scatterPlotMatrixData, "Scatter Plot Matrix", "scatterplotmatrix", payload.activeDS);
+            break;
+        }
+        case IDA_CONSTANTS.UI_ACTION_CODES.UAC_CLUSTERING: {
             const clusteredData = payload.clusteredData;
             clusteredData.sort((a, b) => parseInt(a.Cluster, 10) > parseInt(b.Cluster, 10) ? 1 : parseInt(a.Cluster, 10) < parseInt(b.Cluster, 10) ? -1 : 0);
             addAnalysisEntry(props, clusteredData, "Clustering", "clustering", payload.activeDS, payload.activeTable, payload.columns);
@@ -171,9 +171,9 @@ export default function idaChatbotActionHandler(props, actionCode, payload) {
             addAnalysisEntry(props, payload.suggestionData, "Visualization Suggestion", "suggestion", payload.activeDS, payload.activeTable, []);
             break;
         }
-		case IDA_CONSTANTS.UI_ACTION_CODES.UAC_UPLDDTMSG: {
-			props.setdsUploadWizardOpen(true);
-		}
+        case IDA_CONSTANTS.UI_ACTION_CODES.UAC_UPLDDTMSG: {
+            props.setdsUploadWizardOpen(true);
+        }
         default:
     }
 }

@@ -10,6 +10,7 @@ import Draggable from "react-draggable";
 export default class ChatApp extends React.Component {
 
 	suggestionParams = null;
+	sessionTimeOut = null;
 	chatbotMessage = "";
 
 	constructor(props) {
@@ -102,23 +103,23 @@ export default class ChatApp extends React.Component {
 		this.state.iterator !== -1 && this.msgIterator(e, userMsgs);
 		this.suggestionParams = null;
 
-		if (!this.state.timeOut) {
-			const timeOut = setTimeout(() => {
-				this.setState({
-					timeOut: null,
-					textAreaDisable: true,
-					messages: [...this.state.messages, {
-						sender: "them",
-						timestamp: Date.now(),
-						message: "You have been inactive with IDA for 30 minutes! Your session has been expired. Kindly reload the page."
-					}]
-				});
-			}, 1000 * 60 * 30);
-			this.setState({ timeOut });
-		}
 	}
 
 	processMessage = (msg) => {
+		if (this.sessionTimeOut) {
+			clearTimeout(this.sessionTimeOut);
+		}
+		this.sessionTimeOut = setTimeout(() => {
+			this.setState({
+				timeOut: null,
+				textAreaDisable: true,
+				messages: [...this.state.messages, {
+					sender: "them",
+					timestamp: Date.now(),
+					message: "You have been inactive with IDA for 30 minutes! Your session has been expired. Kindly reload the page."
+				}]
+			});
+		}, 1000 * 60 * 30);
 		axios.post(IDA_CONSTANTS.API_BASE + "/chatmessage", msg, { withCredentials: true, },)
 			.then((response) => {
 				this.showMessage(response.data.message, response.data.timestamp);

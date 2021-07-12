@@ -27,5 +27,6 @@ export const IDA_CONSTANTS = {
 	SORT_MODE_ASC_Y: "asc_y",
 	SORT_MODE_DESC_Y: "desc_y",
 	SORT_MODE_ASC_X: "asc_x",
-	SORT_MODE_DESC_X: "desc_x"
+	SORT_MODE_DESC_X: "desc_x",
+	DATE_FORMATS: ["DD/MM/yyyy", "DD MMM", "MMM YYYY", "DD/MM/yyyy HH:mm:ss", "DD-MMM-yyyy", "MMMM-yyyy", "YYYY"]
 };
