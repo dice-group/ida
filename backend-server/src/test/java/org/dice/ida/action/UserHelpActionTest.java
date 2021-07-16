@@ -33,8 +33,6 @@ public class UserHelpActionTest {
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("Patient_Data_Before_20-04-2020.csv");
 		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 5");
-		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("What is X-Axis?");
 		chatMessageResponse = messageController.handleMessage(chatUserMessage).call();
 		assertEquals(userHelpMessageMap.get("X-Axis"), chatMessageResponse.getMessage());
@@ -48,8 +46,6 @@ public class UserHelpActionTest {
 		chatUserMessage.setMessage("draw line chart");
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("Patient_Data_Before_20-04-2020.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("all");
 		chatMessageResponse = messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("Give a hint");
 		chatUserMessage.setChatbotMessage(chatMessageResponse.getMessage());

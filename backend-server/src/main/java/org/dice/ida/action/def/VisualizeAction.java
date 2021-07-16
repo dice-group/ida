@@ -2,7 +2,9 @@ package org.dice.ida.action.def;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.Value;
+import com.google.protobuf.ListValue.Builder;
 import org.apache.http.ParseException;
 import org.apache.http.client.utils.DateUtils;
 import org.dice.ida.constant.IDAConst;
@@ -113,93 +115,82 @@ public class VisualizeAction implements Action {
 			String tableName = payload.get("activeTable").toString();
 			boolean onTemporaryData = message.isTemporaryData();
 			String filterString = paramMap.get(IDAConst.PARAM_FILTER_STRING).toString();
-			if (ValidatorUtil.isStringEmpty(filterString)) {
-				double confidence = Double.parseDouble(paramMap.get(IDAConst.PARAM_INTENT_DETECTION_CONFIDENCE).toString());
-				if (confidence == 0.0) {
-					paramMap.replace(IDAConst.PARAM_TEXT_MSG, IDAConst.INVALID_FILTER);
-					chatMessageResponse.setMessage(paramMap.get(IDAConst.PARAM_TEXT_MSG).toString());
-					chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
-				}
-				chatMessageResponse.setMessage(paramMap.get(IDAConst.PARAM_TEXT_MSG).toString());
-				chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
+			String intent = paramMap.get(IDAConst.INTENT_NAME).toString();
+			attributeList = rdfUtil.getAttributeList(intent);
+			attributeOptionalMap = rdfUtil.getAttributeOptionalMap(intent);
+			paramDisplayNameMap = rdfUtil.getParamDisplayNames();
+			paramDisplayMessageMap = rdfUtil.getParamDisplayMessages();
+			paramOptionalMessageMap = rdfUtil.getParamOptionalMessages();
+			if (attributeList.containsValue(IDAConst.HAS_LIST_COLUMN)) {
+				columnListVizProcessed = processListAttribute(paramMap, vizType, datasetName, tableName, onTemporaryData, filterString, message);
 			} else {
-				String intent = paramMap.get(IDAConst.INTENT_NAME).toString();
-				attributeList = rdfUtil.getAttributeList(intent);
-				attributeOptionalMap = rdfUtil.getAttributeOptionalMap(intent);
-				paramDisplayNameMap = rdfUtil.getParamDisplayNames();
-				paramDisplayMessageMap = rdfUtil.getParamDisplayMessages();
-				paramOptionalMessageMap = rdfUtil.getParamOptionalMessages();
-				if (attributeList.containsValue(IDAConst.HAS_LIST_COLUMN)) {
-					columnListVizProcessed = processListAttribute(paramMap, vizType, datasetName, tableName, onTemporaryData, filterString, message);
-				} else {
-					columnNameList = getColumnNames(attributeList, paramMap);
-					List<Map<String, String>> columnDetail = ValidatorUtil.areParametersValid(datasetName, tableName, columnNameList, onTemporaryData);
-					columnMap = columnDetail.get(0);
-					columnUniquenessMap = columnDetail.get(1);
-					allParamsProcessed = false;
-					options = processParameters(paramMap);
+				columnNameList = getColumnNames(attributeList, paramMap);
+				List<Map<String, String>> columnDetail = ValidatorUtil.areParametersValid(datasetName, tableName, columnNameList, onTemporaryData);
+				columnMap = columnDetail.get(0);
+				columnUniquenessMap = columnDetail.get(1);
+				allParamsProcessed = false;
+				options = processParameters(paramMap);
+			}
+			if ((options.size() == 1 && allParamsProcessed) || columnListVizProcessed) {
+				if (options.size() == 1) {
+					getParameters(paramMap);
+					if (onTemporaryData) {
+						tableData = message.getActiveTableData();
+						tableData = dataUtil.filterData(tableData, columnNameList, columnMap);
+					} else {
+						tableData = dataUtil.getData(datasetName, tableName, columnNameList, columnMap);
+					}
+					comparator = LableComparator.getForKey(IDAConst.COMPARATOR_TYPE_UNKNOWN);
 				}
-				if ((options.size() == 1 && allParamsProcessed) || columnListVizProcessed) {
-					if (options.size() == 1) {
-						getParameters(paramMap);
-						if (onTemporaryData) {
-							tableData = message.getActiveTableData();
-							tableData = dataUtil.filterData(tableData, filterString, columnNameList, columnMap);
+
+				switch (vizType) {
+					case IDAConst.VIZ_TYPE_BAR_CHART:
+						createGraphData(IDAConst.X_AXIS_PARAM, IDAConst.Y_AXIS_PARAM, paramMap);
+						if (Boolean.parseBoolean(paramMap.getOrDefault("Group_Column_choice", "").toString())) {
+							createGroupedBarGraphResponse();
+							chatMessageResponse.setUiAction(IDAConst.UIA_GROUPED_BARGRAPH);
 						} else {
-							tableData = dataUtil.getData(datasetName, tableName, columnNameList, filterString, columnMap);
+							createBarGraphResponse();
+							chatMessageResponse.setUiAction(IDAConst.UIA_BARGRAPH);
 						}
-						comparator = LableComparator.getForKey(IDAConst.COMPARATOR_TYPE_UNKNOWN);
-					}
+						chatMessageResponse.setMessage(IDAConst.BAR_GRAPH_LOADED);
 
-					switch (vizType) {
-						case IDAConst.VIZ_TYPE_BAR_CHART:
-							createGraphData(IDAConst.X_AXIS_PARAM, IDAConst.Y_AXIS_PARAM, paramMap);
-							if (Boolean.parseBoolean(paramMap.getOrDefault("Group_Column_choice", "").toString())) {
-								createGroupedBarGraphResponse();
-								chatMessageResponse.setUiAction(IDAConst.UIA_GROUPED_BARGRAPH);
-							} else {
-								createBarGraphResponse();
-								chatMessageResponse.setUiAction(IDAConst.UIA_BARGRAPH);
-							}
-							chatMessageResponse.setMessage(IDAConst.BAR_GRAPH_LOADED);
-
-							break;
-						case IDAConst.VIZ_TYPE_BUBBLE_CHART:
-							createGraphData(IDAConst.BUBBLE_LABEL_PARAM, IDAConst.BUBBLE_SIZE_PARAM, paramMap);
-							if (Boolean.parseBoolean(paramMap.getOrDefault("Group_Column_choice", "").toString())) {
-								createGroupedBubbleChartResponse();
-								chatMessageResponse.setUiAction(IDAConst.UIA_GROUPED_BUBBLECHART);
-							} else {
-								createBubbleChartResponse(datasetName, tableName);
-								chatMessageResponse.setUiAction(IDAConst.UIA_BUBBLECHART);
-							}
-							chatMessageResponse.setMessage(IDAConst.BC_LOADED);
-							break;
-						case IDAConst.VIZ_TYPE_SCATTER_PLOT:
-							createScatterPlotData();
-							chatMessageResponse.setUiAction(IDAConst.UIA_SCATTERPLOT);
-							chatMessageResponse.setMessage(IDAConst.SCATTER_PLOT_LOADED);
-							break;
-						case IDAConst.VIZ_TYPE_LINE_CHART:
-							createLineChartResponse(paramMap);
-							chatMessageResponse.setUiAction(IDAConst.UIA_LINECHART);
-							chatMessageResponse.setMessage(IDAConst.LINE_CHART_LOADED);
-							break;
-						case IDAConst.VIZ_TYPE_SCATTER_PLOT_MATRIX:
-							createScatterPlotMatrixData(tableData, columnList, labelColumn, refColumn);
-							chatMessageResponse.setUiAction(IDAConst.UIA_SCATTERPLOT_MATRIX);
-							chatMessageResponse.setMessage(IDAConst.SCATTER_PLOT_MATRIX_LOADED);
-							break;
-						default:
-							chatMessageResponse.setMessage(IDAConst.BOT_SOMETHING_WRONG);
-							chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
-							break;
-					}
-					dialogFlowUtil.resetContext();
-				} else {
-					chatMessageResponse.setMessage(textMsg.toString());
-					chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
+						break;
+					case IDAConst.VIZ_TYPE_BUBBLE_CHART:
+						createGraphData(IDAConst.BUBBLE_LABEL_PARAM, IDAConst.BUBBLE_SIZE_PARAM, paramMap);
+						if (Boolean.parseBoolean(paramMap.getOrDefault("Group_Column_choice", "").toString())) {
+							createGroupedBubbleChartResponse();
+							chatMessageResponse.setUiAction(IDAConst.UIA_GROUPED_BUBBLECHART);
+						} else {
+							createBubbleChartResponse(datasetName, tableName);
+							chatMessageResponse.setUiAction(IDAConst.UIA_BUBBLECHART);
+						}
+						chatMessageResponse.setMessage(IDAConst.BC_LOADED);
+						break;
+					case IDAConst.VIZ_TYPE_SCATTER_PLOT:
+						createScatterPlotData();
+						chatMessageResponse.setUiAction(IDAConst.UIA_SCATTERPLOT);
+						chatMessageResponse.setMessage(IDAConst.SCATTER_PLOT_LOADED);
+						break;
+					case IDAConst.VIZ_TYPE_LINE_CHART:
+						createLineChartResponse(paramMap);
+						chatMessageResponse.setUiAction(IDAConst.UIA_LINECHART);
+						chatMessageResponse.setMessage(IDAConst.LINE_CHART_LOADED);
+						break;
+					case IDAConst.VIZ_TYPE_SCATTER_PLOT_MATRIX:
+						createScatterPlotMatrixData(tableData, columnList, labelColumn, refColumn);
+						chatMessageResponse.setUiAction(IDAConst.UIA_SCATTERPLOT_MATRIX);
+						chatMessageResponse.setMessage(IDAConst.SCATTER_PLOT_MATRIX_LOADED);
+						break;
+					default:
+						chatMessageResponse.setMessage(IDAConst.BOT_SOMETHING_WRONG);
+						chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
+						break;
 				}
+				dialogFlowUtil.resetContext();
+			} else {
+				chatMessageResponse.setMessage(textMsg.toString());
+				chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
 			}
 		}
 	}
@@ -227,7 +218,14 @@ public class VisualizeAction implements Action {
 		for (String attribute : attributeList) {
 			instanceMap.keySet().forEach(instance -> attributeTypeMap.put(attribute, instanceMap.get(instance).get(attribute).get("type")));
 		}
-		Value paramVal = (Value) paramMap.get(attributeList.get(0));
+		Value paramVal;
+		if ("true".equals(paramMap.get("from_suggestion"))) {
+			Builder listBuilder = ListValue.newBuilder();
+			((List<String>) paramMap.get(attributeList.get(0))).forEach(c -> listBuilder.addValues(Value.newBuilder().setStringValue(c).build()));
+			paramVal = Value.newBuilder().setListValue(listBuilder.build()).build();
+		} else {
+			paramVal = (Value) paramMap.get(attributeList.get(0));
+		}
 		if (!(selectAll == null && paramVal == null)) {
 			paramVal.getListValue().getValuesList().forEach(str -> columnListParameter.add(str.getStringValue()));
 			if (!selectAll.isEmpty()) {
@@ -255,9 +253,9 @@ public class VisualizeAction implements Action {
 							}
 							if (onTemporaryData) {
 								tableData = message.getActiveTableData();
-								tableData = dataUtil.filterData(tableData, filterString, columnList, columnMap);
+								tableData = dataUtil.filterData(tableData, columnList, columnMap);
 							} else
-								tableData = dataUtil.getData(datasetName, tableName, columnList, filterString, columnMap);
+								tableData = dataUtil.getData(datasetName, tableName, columnList, columnMap);
 							columnListVizProcessed = true;
 						}
 					} else {
@@ -645,7 +643,7 @@ public class VisualizeAction implements Action {
 					for (String group : groupedGraphItems.keySet()) {
 						Map<String, Double> entries = groupedGraphItems.get(group);
 						Map<String, Integer> lbls = groupedLabelCounts.get(group);
-						entries.replaceAll((l, v) -> entries.get(l) / lbls.get(l));
+						entries.replaceAll((l, v) -> Double.isNaN(entries.get(l) / lbls.get(l)) ? 0.0 : entries.get(l) / lbls.get(l));
 						groupedGraphItems.put(group, entries);
 					}
 					graphItems.replaceAll((l, v) -> graphItems.get(l) / labelCounts.get(l));
@@ -1144,7 +1142,7 @@ public class VisualizeAction implements Action {
 		if (areAllUnique) {
 			return areAllUnique;
 		}
-		List<Map<String, String>> data = dataUtil.getData(payload.get("activeDS").toString(), payload.get("activeTable").toString(), columnsLst, paramMap.get(IDAConst.PARAM_FILTER_STRING).toString(), columnMap);
+		List<Map<String, String>> data = dataUtil.getData(payload.get("activeDS").toString(), payload.get("activeTable").toString(), columnsLst, columnMap);
 		List<String> rowVal;
 		for (Map<String, String> row : data) {
 			rowVal = new ArrayList<>();

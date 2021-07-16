@@ -174,7 +174,7 @@ public class SuggestVisualization implements Action {
 		if (areAllUnique) {
 			return areAllUnique;
 		}
-		List<Map<String, String>> data = dataUtil.getData(payload.get("activeDS").toString(), payload.get("activeTable").toString(), columnsLst, paramMap.get(IDAConst.PARAM_FILTER_STRING).toString(), columnMap);
+		List<Map<String, String>> data = dataUtil.getData(payload.get("activeDS").toString(), payload.get("activeTable").toString(), columnsLst, columnMap);
 		List<String> rowVal;
 		for (Map<String, String> row : data) {
 			rowVal = new ArrayList<>();

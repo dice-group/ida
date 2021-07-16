@@ -9,13 +9,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
 public class ScatterPlotMatrixActionTest {
@@ -31,8 +32,6 @@ public class ScatterPlotMatrixActionTest {
 		chatUserMessage.setMessage("draw scatter plot matrix");
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("countries-of-the-world.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 10");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("country, density, gdp, literacy");
 		messageController.handleMessage(chatUserMessage).call();
@@ -111,7 +110,9 @@ public class ScatterPlotMatrixActionTest {
 			}});
 		}});
 		assertNotNull(actualData);
-		assertEquals(expectedData, actualData);
+		assertEquals(expectedData.getLabelColumn(), actualData.getLabelColumn());
+		assertEquals(expectedData.getColumns(), actualData.getColumns());
+		assertTrue(actualData.getItems().containsAll(expectedData.getItems()));
 		sessionUtil.resetSessionId();
 	}
 
@@ -121,8 +122,6 @@ public class ScatterPlotMatrixActionTest {
 		chatUserMessage.setMessage("draw scatter plot matrix");
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("countries-of-the-world.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 5");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("country, density, gdp, literacy");
 		messageController.handleMessage(chatUserMessage).call();
@@ -138,7 +137,6 @@ public class ScatterPlotMatrixActionTest {
 			add("Pop. Density (per sq. mi.)");
 			add("GDP ($ per capita)");
 			add("Literacy (%)");
-			add("Country");
 		}});
 		expectedData.setReferenceColumn("Region");
 		expectedData.setLabelColumn("Country");
@@ -180,7 +178,10 @@ public class ScatterPlotMatrixActionTest {
 			}});
 		}});
 		assertNotNull(actualData);
-		assertEquals(expectedData, actualData);
+		assertEquals(expectedData.getLabelColumn(), actualData.getLabelColumn());
+		assertEquals(expectedData.getReferenceColumn(), actualData.getReferenceColumn());
+		assertEquals(expectedData.getColumns(), actualData.getColumns());
+		assertTrue(actualData.getItems().containsAll(expectedData.getItems()));
 		sessionUtil.resetSessionId();
 	}
 
@@ -190,8 +191,6 @@ public class ScatterPlotMatrixActionTest {
 		chatUserMessage.setMessage("draw scatter plot matrix");
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("Patient_Data_Before_20-04-2020.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 5");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("all");
 		messageController.handleMessage(chatUserMessage).call();
@@ -234,7 +233,9 @@ public class ScatterPlotMatrixActionTest {
 			}});
 		}});
 		assertNotNull(actualData);
-		assertEquals(expectedData, actualData);
+		assertEquals(expectedData.getLabelColumn(), actualData.getLabelColumn());
+		assertEquals(expectedData.getColumns(), actualData.getColumns());
+		assertTrue(actualData.getItems().containsAll(expectedData.getItems()));
 		sessionUtil.resetSessionId();
 	}
 
@@ -244,11 +245,6 @@ public class ScatterPlotMatrixActionTest {
 		chatUserMessage.setMessage("draw scatter plot matrix");
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("countries-of-the-world.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("null");
-		chatMessageResponse = messageController.handleMessage(chatUserMessage).call();
-		assertEquals("Please select a valid filter (for example: all | first 20 | last 30  | from 55 to 100 records).", chatMessageResponse.getMessage());
-		chatUserMessage.setMessage("all");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("region, density");
 		chatMessageResponse = messageController.handleMessage(chatUserMessage).call();
@@ -272,8 +268,6 @@ public class ScatterPlotMatrixActionTest {
 		chatUserMessage.setActiveTableData((List<Map<String, String>>) chatMessageResponse.getPayload().get("clusteredData"));
 		chatUserMessage.setTemporaryData(true);
 		chatUserMessage.setMessage("draw scatter plot matrix");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 5");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("density, gdp, literacy");
 		messageController.handleMessage(chatUserMessage).call();
@@ -323,7 +317,9 @@ public class ScatterPlotMatrixActionTest {
 
 		}});
 		assertNotNull(actualData);
-		assertEquals(expectedData, actualData);
+		assertEquals(expectedData.getLabelColumn(), actualData.getLabelColumn());
+		assertEquals(expectedData.getColumns(), actualData.getColumns());
+		assertTrue(actualData.getItems().containsAll(expectedData.getItems()));
 		sessionUtil.resetSessionId();
 	}
 }

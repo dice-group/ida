@@ -14,6 +14,7 @@ import org.dice.ida.util.DialogFlowUtil;
 import org.dice.ida.util.FileUtil;
 import org.dice.ida.util.SessionUtil;
 import org.dice.ida.util.ValidatorUtil;
+import org.dice.ida.util.SuggestionUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import weka.clusterers.EM;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -66,6 +68,8 @@ public class ClusterAction implements Action {
 	@Autowired
 	private SessionUtil sessionUtil;
 	private List<String> columnNames;
+	@Autowired
+	private SuggestionUtil suggestionUtil;
 
 	/**
 	 * @param paramMap            - parameters from dialogflow
@@ -73,49 +77,50 @@ public class ClusterAction implements Action {
 	 */
 	@Override
 	public void performAction(Map<String, Object> paramMap, ChatMessageResponse chatMessageResponse, ChatUserMessage message) throws Exception {
-			fileUtil = new FileUtil();
-			textMsg = new StringBuilder(paramMap.get(IDAConst.PARAM_TEXT_MSG).toString());
-			if (ValidatorUtil.preActionValidation(chatMessageResponse)) {
-				payload = chatMessageResponse.getPayload();
-				datasetName = payload.get("activeDS").toString();
-				tableName = payload.get("activeTable").toString();
-				multiParmaValue = null;
-				sessionMap = sessionUtil.getSessionMap();
-				this.paramMap = paramMap;
-				String fullIntentName = paramMap.get(IDAConst.FULL_INTENT_NAME).toString();
-				clusterMethod = getClusterMethod(fullIntentName);
-				String parameterChangeChoice = getParameterChangeChoice(fullIntentName);
-				paramtertoChange = getParameterToChange(fullIntentName);
-				if (!clusterMethod.isEmpty() && parameterChangeChoice.isEmpty()) {
-					if (clusterMethod.equals("getColumnList")) {
-						if (verifynApplyFilter(paramMap.get("column_List"))) {
-							textMsg.append("Okay! Here is the list algorithms you can use,<br/><ul>");
-							textMsg.append("<li>Kmean</li><li>Farthest First</li></ul>");
-							textMsg.append("<br/>Which algorithm would you like to use?");
-							if (checkforNominalAttribute())
-								textMsg.append("<br/><b>Warning</b> : If too many nominal attributes are selected, clustering might take longer than expected. If its taking longer than <b>" + (IDAConst.TIMEOUT_LIMIT / 60000) + " minutes</b>, the process will be terminated.");
-						}
-					} else {
-						textMsg = new StringBuilder("Okay!! Here is the list of default parameter and our suggested parameters<br/>");
-						showParamList();
-						textMsg.append("<br/>Would you like to change any parameter?");
+		fileUtil = new FileUtil();
+		textMsg = new StringBuilder(paramMap.get(IDAConst.PARAM_TEXT_MSG).toString());
+		if (ValidatorUtil.preActionValidation(chatMessageResponse)) {
+			payload = chatMessageResponse.getPayload();
+			datasetName = payload.get("activeDS").toString();
+			tableName = payload.get("activeTable").toString();
+			multiParmaValue = null;
+			sessionMap = sessionUtil.getSessionMap();
+			this.paramMap = paramMap;
+			String fullIntentName = paramMap.get(IDAConst.FULL_INTENT_NAME).toString();
+			clusterMethod = getClusterMethod(fullIntentName);
+			String parameterChangeChoice = getParameterChangeChoice(fullIntentName);
+			paramtertoChange = getParameterToChange(fullIntentName);
+			if (!clusterMethod.isEmpty() && parameterChangeChoice.isEmpty()) {
+				if (clusterMethod.equals("getColumnList")) {
+					if (verifynApplyFilter(paramMap.get("column_List"))) {
+						textMsg.append("Okay! Here is the list algorithms you can use,<br/><ul>");
+						textMsg.append("<li>Kmean</li><li>Farthest First</li></ul>");
+						textMsg.append("<br/>Which algorithm would you like to use?");
 						if (checkforNominalAttribute())
 							textMsg.append("<br/><b>Warning</b> : If too many nominal attributes are selected, clustering might take longer than expected. If its taking longer than <b>" + (IDAConst.TIMEOUT_LIMIT / 60000) + " minutes</b>, the process will be terminated.");
 					}
-				} else if (!paramtertoChange.isEmpty()) {
-					getnsetNewParamValue();
-				}
-				if (parameterChangeChoice.equals("no")) {
-					loadClusteredData();
-					chatMessageResponse.setPayload(payload);
-					textMsg = new StringBuilder("Your clustered data is loaded.");
-					chatMessageResponse.setUiAction(IDAConst.UIA_CLUSTER);
-					dialogFlowUtil.resetContext();
 				} else {
-					chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
+					textMsg = new StringBuilder("Okay!! Here is the list of default parameter and our suggested parameters<br/>");
+					showParamList();
+					textMsg.append("<br/>Would you like to change any parameter?");
+					if (checkforNominalAttribute())
+						textMsg.append("<br/><b>Warning</b> : If too many nominal attributes are selected, clustering might take longer than expected. If its taking longer than <b>" + (IDAConst.TIMEOUT_LIMIT / 60000) + " minutes</b>, the process will be terminated.");
 				}
-				chatMessageResponse.setMessage(textMsg.toString());
+			} else if (!paramtertoChange.isEmpty()) {
+				getnsetNewParamValue();
 			}
+			if (parameterChangeChoice.equals("no")) {
+				loadClusteredData();
+				loadScatterPlotMatrixParams();
+				chatMessageResponse.setPayload(payload);
+				textMsg = new StringBuilder("Your clustered data is loaded. <br/><br/> <ida-btn msg='Draw Scatterplot matrix' vizParams='scatterPlotMatrixParams' value='Click me' style='default'> to render the scatter plot matrix for the clustered data.");
+				chatMessageResponse.setUiAction(IDAConst.UIA_CLUSTER);
+				dialogFlowUtil.resetContext();
+			} else {
+				chatMessageResponse.setUiAction(IDAConst.UAC_NRMLMSG);
+			}
+			chatMessageResponse.setMessage(textMsg.toString());
+		}
 	}
 
 	/**
@@ -140,6 +145,29 @@ public class ClusterAction implements Action {
 		payload.put("clusteredData", clusteredData);
 		columnNames.add("Cluster");
 		payload.put("columns", columnNames);
+	}
+
+	/**
+	 * Method to populate the parameter values for plotting a scatter-plot matrix for clustered data
+	 *
+	 * @throws Exception if the dataset name or table name is invalid
+	 */
+	private void loadScatterPlotMatrixParams() throws Exception {
+		Map<String, Map<String, Double>> statProps = suggestionUtil.getStatProps(datasetName, tableName);
+		payload.put("scatterPlotMatrixParams", new HashMap<>() {{
+			put(IDAConst.PARAM_INTENT_DETECTION_CONFIDENCE, "1.0");
+			put(IDAConst.INTENT_NAME, "scatter_plot_matrix");
+			put(IDAConst.PARAM_FILTER_STRING, "all");
+			put(IDAConst.PARAM_TEXT_MSG, "Scatter plot matrix for the clustered data has been rendered");
+			put("isGrouped", "false");
+			put("Reference_Values_choice", "true");
+			put("Column_List", ((Value) paramMap.get("column_List")).getListValue().getValuesList().stream().map(Value::getStringValue));
+			put("Reference_Column", "Cluster");
+			put("ScatterPlotMatrix_Label", Collections.min(statProps.get(IDAConst.COLUMN_SD_ALL).entrySet(), Map.Entry.comparingByValue()).getKey());    // Choose the column with least standard deviation for label values
+			put("Reference_Column_Choice", "true");
+			put("from_suggestion", "true");
+			put("All_select", "");
+		}});
 	}
 
 	/**

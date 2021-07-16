@@ -13,8 +13,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 public class ScatterPlotActionTest {
@@ -29,8 +29,6 @@ public class ScatterPlotActionTest {
 		chatUserMessage.setMessage("draw scatter plot");
 		chatUserMessage.setActiveDS("test_dataset");
 		chatUserMessage.setActiveTable("countries-of-the-world.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 5");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("density");
 		messageController.handleMessage(chatUserMessage).call();
@@ -49,7 +47,7 @@ public class ScatterPlotActionTest {
 			add(new ScatterPlotItem(152.1, 19000.0, null, "Andorra "));
 		}};
 		assertNotNull(scatterPlotData);
-		assertEquals(scatterPlotData.getItems(), scatterPlotItemList);
+		assertTrue(scatterPlotData.getItems().containsAll(scatterPlotItemList));
 		sessionUtil.resetSessionId();
 	}
 
@@ -59,8 +57,6 @@ public class ScatterPlotActionTest {
 		chatUserMessage.setMessage("draw scatter plot");
 		chatUserMessage.setActiveDS("countries");
 		chatUserMessage.setActiveTable("countries-of-the-world.csv");
-		messageController.handleMessage(chatUserMessage).call();
-		chatUserMessage.setMessage("first 5");
 		messageController.handleMessage(chatUserMessage).call();
 		chatUserMessage.setMessage("density");
 		messageController.handleMessage(chatUserMessage).call();
@@ -81,7 +77,7 @@ public class ScatterPlotActionTest {
 			add(new ScatterPlotItem(152.1, 19000.0, "WESTERN EUROPE                     ", "468"));
 		}};
 		assertNotNull(scatterPlotData);
-		assertEquals(scatterPlotData.getItems(), scatterPlotItemList);
+		assertTrue(scatterPlotData.getItems().containsAll(scatterPlotItemList));
 		sessionUtil.resetSessionId();
 	}
 }
